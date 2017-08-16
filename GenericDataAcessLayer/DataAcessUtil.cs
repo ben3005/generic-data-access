@@ -4,19 +4,55 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 
 namespace GenericDataAcessLayer
 {
     public class DataAcessUtil
     {
+        private const string CONNECTION_STRING = "";
+        private const string SELECT_STATEMENT = "SELECT{0}FROM {1} {2}";
+
         public IEnumerable<T> Search<T>(object config)
             where T : new()
         {
-            string tableName = typeof(T).GetTypeInfo().GetCustomAttribute<DatabaseTableName>().Name;
-
-
-
+            var queryBuilder = new StringBuilder();
+            queryBuilder.Append(ConstructQuery<T>());
+            Console.WriteLine(queryBuilder.ToString());
             return new List<T>();
+        }
+
+        private string ConstructQuery<T>()
+        {
+            var selectBuilder = new StringBuilder();
+            string tableName = typeof(T).GetTypeInfo().GetCustomAttribute<DatabaseTableName>().Name;
+            char tableAlias = tableName.First();
+            var returnColumns = GetSelectColumns<T, DatabaseSearchSelect>();
+            foreach (string returnColumn in returnColumns)
+            {
+                selectBuilder.Append(Environment.NewLine + '\t' + tableAlias + '.' + returnColumn);
+            }
+
+            selectBuilder.Append(Environment.NewLine);
+            return string.Format(SELECT_STATEMENT, selectBuilder.ToString(), tableName, tableAlias);
+        }
+
+        private IEnumerable<string> GetSelectColumns<TSelect, TSelectable>()
+            where TSelectable : DatabaseSearchSelect
+        {
+            foreach (var prop in typeof(TSelect).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.GetCustomAttribute(typeof(TSelectable)) != null))
+            {
+                var columnName = prop.GetCustomAttribute<DatabaseColumn>();
+                if (columnName != null)
+                {
+                    yield return columnName.Name;
+                }
+                else
+                {
+                    yield return prop.Name;
+                }
+            }
         }
 
         public bool Update<T>(T obj) where T : new()

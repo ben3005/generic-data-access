@@ -8,7 +8,11 @@ namespace GenericDataAcessLayer
     public class Person
     {
         public int Id { get; set; }
+        [DatabaseColumn("fName")]
+        [DatabaseSearchSelect]
         public string FirstName { get; set; }
+        [DatabaseColumn("sName")]
+        [DatabaseSearchSelect]
         public string LastName { get; set; }
     }
 }
